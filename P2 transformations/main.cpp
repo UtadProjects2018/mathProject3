@@ -43,14 +43,34 @@ float smooth = 1.5f;
 
 double rotateangle = 0;
 
+enum MathOperationType { add, substract, multiply, magnitude, normalize, transpose, transfrom };
+MathOperationType mathOperationType = add;
+void DrawDotTransformation();
+void showText(VECTOR3D vector, const std::string &string);
+bool moveCamera = false;
+
 void HandleMouseMotion(int x, int y)
 {
-    xLastValue = x;
-    yLastValue =y;
+    if (!moveCamera)
+    {
+        return;
+    }
+    
+    xLastValue = x - (camera.screenwidth/2);
+    yLastValue = y - (camera.screenwidth/2);
 }
 
 void HandleMousePassiveMotion(int x, int y)
 {
+    if (!moveCamera)
+    {
+        euler.yaw = 0;
+        euler.pitch = 0;
+        euler.roll = 0;
+        euler.orientation = { 1, 0, 0, 0 };
+        return;
+    }
+    
     int dx = xLastValue - x;
     int dy = yLastValue - y;
     
@@ -64,12 +84,6 @@ void HandleMousePassiveMotion(int x, int y)
 
 int main(int argc,char **argv)
 {
-
-//    VECTOR3D from  = {1, 2, 3};
-//    VECTOR3D to  = {2, 1, 3};
-//    QUATERNION a = QuaternionFromToVectors(Normalize(from), Normalize(to));
-//    QUATERNION b = QuaternionFromAngleAxis(30, Normalize(from));
-    
     camera.screenwidth = 600;
     camera.screenheight = 400;
 
@@ -119,6 +133,15 @@ void Display(void)
     glDrawBuffer(GL_BACK_LEFT);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
+    //MENU
+    showText({-4, -2.0, 0}, "1-) Math operation ADD tap a ");
+    showText({-4, -2.5, 0}, "2-) Math operation Substract tap s ");
+    showText({-4, -3.0, 0}, "3-) Math operation Multiply tap m ");
+    showText({-4, -3.5, 0}, "4-) Math operation Magnitude tap g ");
+    showText({-4, -4.0, 0}, "5-) Math operation Normalize tap n ");
+    showText({-4, -4.5, 0}, "6-) Math operation Transpose tap p ");
+    showText({-4, -5.0, 0}, "7-) Math operation Transfrom tap t ");
+    showText({-4, -5.5, 0}, "8-) Move camera tap y ");
     
     glDrawBuffer(GL_BACK);
     
@@ -134,10 +157,9 @@ void Display(void)
     glMatrixMode(GL_MODELVIEW);
     
     glLoadIdentity();
-    //VECTOR3D target = Add(camera.position, camera.direction);
+    
     VECTOR3D target = Add(camera.position, getForward(euler));
     
-    /*gluLookAt(camera.position.x,camera.position.y,camera.position.z, target.x , target.y, target.z, camera.up.x,camera.up.y,camera.up.z);*/
     
     MATRIX4 lookAtMatrix = lookAt(camera.position, target, camera.up);
     glLoadMatrixf(lookAtMatrix.m);
@@ -162,104 +184,101 @@ void Render(void)
     glRotatef(rotateangle,0.0,1.0,0.0);
 
     drawAxis();
-    
-//    // add
-//    {
-//        VECTOR3D a = {3,2,0};
-//        VECTOR3D b = {2,1,0};
-//
-//        drawDot(a,0.25, green);
-//        drawDot(b,0.25, red);
-//
-//        VECTOR3D p = Add(a,b);
-//        drawDot(p, 0.25);
-//    }
-    
-     //substract
-    /*{
-        VECTOR3D a = {3,2,0};
-        VECTOR3D b = {2,1,0};
-        
-        drawDot(a,0.25, green);
-        drawDot(b,0.25, red);
-        
-        VECTOR3D p = Substract(a,b);
-        drawDot(p, 0.25);
-    }*/
-
-    /* //multiply
-    {
-        VECTOR3D a = {3,2,0};
-        VECTOR3D b = {1,0.5,1};
-        
-        drawDot(a,0.25, green);
-        drawDot(b,0.25, red);
-        
-        VECTOR3D p = Multiply(a,b);
-        drawDot(p, 0.25);
-    }*/
-    
-//    // magnitude
-//    {
-//        VECTOR3D a = {3,2,0};
-//        VECTOR3D b = {2,2,0};
-//
-//        drawDot(a,0.25, green);
-//        drawDot(b,0.25, red);
-//
-//        VECTOR3D p = Substract(a,b);
-//        drawDot(p, 0.25);
-//
-//        double magnitudeOfP = Magnitude(p);
-//        printf("magnitude: %f\n", magnitudeOfP);
-//    }
-    
-    /*
-    {
-        VECTOR3D vector = {3,2,0};
-        
-        drawDot(a,0.25, green);
-        
-        
-        VECTOR3D p = MultiplyWithScalar(2, a);
-        drawDot(p, 0.25);
-        
-    }*/
-    
-     //normalize
-    /*{
-        VECTOR3D a = {2,3,0};
-        VECTOR3D b = Normalize(a);
-        drawDot(a,0.25, red);
-        drawDot(b,0.25, darkred);
-    }*/
-    
-    // Transpose
-//    {
-//        MATRIX3 matrix = {
-//            {1, 2, 3},
-//            {4, 5, 6},
-//            {7, 8, 9},
-//        };
-//        MATRIX3 result = Transpose(matrix);
-//        printf("asd");
-//    }
-    
-    // Transfrom
-    /*{
-        VECTOR3D vector = { 1, 2, 3};
-        
-        MATRIX3 matrix = {
-            {2, 0, 0},
-            {0, 2, 0},
-            {0, 0, 2}
-        };
-        
-        VECTOR3D result = Transform(matrix, vector);
-        drawDot(result, 0.25, red);
-    }*/
-    
+    DrawDotTransformation();
     glPopMatrix();
+}
+
+void DrawDotTransformation()
+{
+    switch (mathOperationType)
+    {
+        case add:
+        {
+            VECTOR3D a = {3,2,0};
+            VECTOR3D b = {2,1,0};
+            
+            drawDot(a, 0.25, green);
+            drawDot(b, 0.25, red);
+            
+            VECTOR3D p = Add(a,b);
+            drawDot(p, 0.25);
+        }
+        break;
+        case substract:
+        {
+            VECTOR3D a = {3,2,0};
+            VECTOR3D b = {2,1,0};
+            
+            drawDot(a,0.25, green);
+            drawDot(b,0.25, red);
+            
+            VECTOR3D p = Substract(a,b);
+            drawDot(p, 0.25);
+        }
+        break;
+        case multiply:
+        {
+            VECTOR3D a = {3,2,0};
+            VECTOR3D b = {1,0.5,1};
+            
+            drawDot(a,0.25, green);
+            drawDot(b,0.25, red);
+            
+            VECTOR3D p = Multiply(a,b);
+            drawDot(p, 0.25);
+        }
+        break;
+        case magnitude:
+        {
+            VECTOR3D a = {3,2,0};
+            VECTOR3D b = {2,2,0};
+            
+            drawDot(a,0.25, green);
+            drawDot(b,0.25, red);
+            
+            VECTOR3D p = Substract(a,b);
+            drawDot(p, 0.25);
+            printf("magnitude: %f\n", Magnitude(p));
+        }
+        break;
+        case normalize:
+        
+        {
+            VECTOR3D a = {2,3,0};
+            VECTOR3D b = Normalize(a);
+            drawDot(a,0.25, red);
+            drawDot(b,0.25, darkred);
+        }
+        break;
+        
+        case transpose:
+        
+        {
+            MATRIX3 matrix =
+            {
+                {1, 2, 3},
+                {4, 5, 6},
+                {7, 8, 9},
+            };
+            MATRIX3 result = Transpose(matrix);
+            std::cout << &result << std::endl;
+        }
+        break;
+        case  transfrom:
+        {
+            VECTOR3D vector = { 1, 2, 3};
+            
+            MATRIX3 matrix = {
+                {2, 0, 0},
+                {0, 2, 0},
+                {0, 0, 2}
+            };
+            
+            VECTOR3D result = Transform(matrix, vector);
+            drawDot(result, 0.25, red);
+        }
+        break;
+    }
 }
 
 void Lighting(void)
@@ -294,23 +313,62 @@ void Lighting(void)
 
 void HandleKeyboard(unsigned char key,int x, int y)
 {
-    switch (key) {
+    switch (key)
+    {
         case ESC:
         case 'Q':
         case 'q':
             exit(0);
-            break;
+        break;
         case 'R':
         case 'r':
             rotateangle += rotatespeed;
-            break;
-            
-
-
+        break;
+        
+        case 'a':
+        case 'A':
+            mathOperationType = add;
+        break;
+        
+        case 's':
+        case 'S':
+            mathOperationType = substract;
+        break;
+        
+        case 'm':
+        case 'M':
+            mathOperationType = multiply;
+        break;
+        
+        case 'g':
+        case 'G':
+            mathOperationType = magnitude;
+        break;
+        
+        case 'n':
+        case 'N':
+            mathOperationType = normalize;
+        break;
+        
+        case 't':
+        case 'T':
+            mathOperationType = transfrom;
+        break;
+        
+        case 'p':
+        case 'P':
+            mathOperationType = transpose;
+        break;
+        
+        case 'y':
+        case 'Y':
+        moveCamera = !moveCamera;
+        break;
+        
         case 'h':
         case 'H':
             InitCamera(0);
-            break;
+        break;
     }
 }
 
@@ -346,3 +404,15 @@ void InitCamera(int mode)
     camera.up.z = 0;
 }
 
+void showText(VECTOR3D vector, const std::string &string)
+{
+    glColor3d(1.0, 0.5, 0.8);
+    glPushMatrix();
+    glTranslatef(vector.x, vector.y, vector.z);
+    glScalef(0.0025, 0.0025, 0.0025);
+    for (int i=0; i < string.size(); ++i)
+    {
+        glutStrokeCharacter(GLUT_STROKE_ROMAN, string[i]);
+    }
+    glPopMatrix();
+}
